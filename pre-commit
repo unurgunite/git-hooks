@@ -1,3 +1,22 @@
 #!/usr/bin/env sh
-
+#|-----------------------------------------------------------------------------------------------------------------|
+#| Program Name: pre-commit
+#|-----------------------------------------------------------------------------------------------------------------|
+#| Description: This script is a standard git hook. It checks for mistakes inside commit message and commit files.
+#|                This script uses POSIX standards and should work with no errors in Unix as well as in
+#|                Unix-like OS
+#|-----------------------------------------------------------------------------------------------------------------|
+#| Description: This script checks for mistakes inside commit message and commited files
+#|        1) This script checks for mistakes inside commit message and make decisions if any were found
+#|        2) Runs RuboCop and checks for any errors
+#|
+#| Note:
+#|        a) This script takes params in UNIX-style where and how to setup script
+#|
+#|-----------------------------------------------------------------------------------------------------------------|
+#| Author: unurgunite
+#| Date: 2022/09/05
+#|-----------------------------------------------------------------------------------------------------------------|
+#| License: MIT
+#|-----------------------------------------------------------------------------------------------------------------|
 
