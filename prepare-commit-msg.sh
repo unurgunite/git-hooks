@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 #|-----------------------------------------------------------------------------------------------------------------|
-#| Program Name: prepare-commit-message.sh
+#| Program Name: prepare-commit-msg.sh
 #|-----------------------------------------------------------------------------------------------------------------|
 #| Description: This script is a standard git hook. It checks for mistakes inside commit message.
 #|                This script uses POSIX standards and should work with no errors in Unix as well as in 
@@ -19,4 +19,5 @@
 #|-----------------------------------------------------------------------------------------------------------------|
 #| License: MIT
 #|-----------------------------------------------------------------------------------------------------------------|
+
 
