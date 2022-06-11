@@ -7,7 +7,7 @@ text = File.read(message_file)
 module Gem # :nodoc:
   class Version # :nodoc:
     def self.legacy?
-      !!(Gem::Version.new(RUBY_VERSION) <= Gem::Version.new('2.6.10'))
+      Gem::Version.new(RUBY_VERSION) <= Gem::Version.new('2.6.10')
     end
   end
 end
@@ -40,7 +40,7 @@ class CommitMessage < String
   end
 
   def edit_message!
-    raise NonEnglishLettersError if non_enlish_chars?
+    raise NonEnglishLettersError if non_english_chars?
 
     capitalize! unless capitalized?
     upcase if start_with_verb?
@@ -55,7 +55,7 @@ class CommitMessage < String
   end
 
   def capitalized?
-    self[0].upcase == self[0]
+    self[0]&.upcase == self[0]
   end
 
   def start_with_verb?
