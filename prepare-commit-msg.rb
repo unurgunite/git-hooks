@@ -22,11 +22,17 @@ class FileNotFoundError < StandardError
   end
 end
 
+module Encoding # :nodoc:
+  # docs
+  UnknownEncoding = Encoding.new
+end
+
 # docs
 class NonEnglishLettersError < StandardError
   attr_reader :msg
 
-  def initialize(msg: 'Write your commit messages only with English letters!')
+  def initialize(msg: 'Write your commit messages only with English
+                 letters!')
     @msg = msg
     super(msg)
   end
@@ -120,49 +126,9 @@ class CommitMessage < String
   end
 end
 
-class CommitFiles < File # :nodoc:
-  def initialize(files)
-    @files = files
-    super(files)
-  end
-
-  def edit_files!
-    @files.each do |file|
-      file.fix_encoding!
-      file.remove_bom!
-      file.remove_carriage!
-    end
-  end
-
-  private
-
-  # self?
-  # r: ? (fix encoding of file)
-  def fix_encoding!
-    return true if file_encoding(self) == Encoding::UTF_8 || file_encoding(self) == Encoding::ASCII_8BIT
-
-    file = File.open(filename, 'r:')
-    true
-  end
-
-  def file_encoding(file)
-    raise FileNotFoundError unless File.exist?(file) || File.symlink?(file)
-
-    `file -E -b --mime-encoding #{file}`.strip.split(': ').last
-  end
-
-  def remove_bom!
-    File.read(file).sub("\xEF\xBB\xBF")
-  end
-
-  def remove_carriage!
-    File.read(file).gsub("\r", '')
-  end
-end
-
 # message = ARGV[0]
 # text = File.read(message)
-# commit_message = CommitMesage.new(text)
+# commit_message = CommitMessage.new(text)
 # commit_message.edit_message!
 
 File.write(message, commit_message)
