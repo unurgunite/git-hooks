@@ -7,8 +7,9 @@
 #|                other Unix-like OS'.
 #|-----------------------------------------------------------------------------------------------------------------|
 #| Description: This script checks if commit for mistakes inside commit message and commited files
-#|        1) This script checks if commit is initial
-#|        2) It checks for whitespace errors
+#|        1) This script checks if file saved in UTF-8
+#|        2) It removes BOM and carriage return
+#|        3) It runs rubocop
 #|
 #| Note:
 #|        a) This script does not take any arguments
@@ -20,24 +21,15 @@
 #| License: MIT
 #|-----------------------------------------------------------------------------------------------------------------|
 
-# Check if this is the initial commit
-if git rev-parse --verify HEAD >/dev/null 2>&1
-then
-    echo "pre-commit: About to create a new commit..."
-    against=HEAD
-else
-    echo "pre-commit: About to create the first commit..."
-    against=4b825dc642cb6eb9a060e54bf8d69288fbee4904
+# Check that the file is saved in UTF-8 encoding
+if ! file --mime-encoding "$1" | grep -q 'utf-8'; then
+  echo "Error: File $1 is not saved in UTF-8 encoding"
+  exit 1
 fi
 
-# Use git diff-index to check for whitespace errors
-echo "pre-commit: Testing for whitespace errors..."
-if ! git diff-index --check --cached $against
-then
-    echo "pre-commit: Aborting commit due to whitespace errors"
-    exit 1
-else
-    echo "pre-commit: No whitespace errors were detected"
-    exit 0
-fi
+# Remove BOM and carriage return
+sed -i '' -e 's/^\xEF\xBB\xBF//' "$1"
+sed -i '' -e 's/\r$//' "$1"
 
+# Run rubocop to detect and automatically fix errors in the code
+bundle exec rubocop --auto-correct "$1"
