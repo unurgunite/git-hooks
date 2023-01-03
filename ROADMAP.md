@@ -1,6 +1,6 @@
 | Hook Name        | Done |
 |------------------|------|
-| `pre-commit`     | [ ]  |
+| `pre-commit`     | [X]  |
 | `prepare-commit` | [ ]  |
 | `commit-msg`     | [ ]  |
 | `post-commit`    | [ ]  |
