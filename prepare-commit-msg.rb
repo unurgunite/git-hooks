@@ -1,92 +1,58 @@
-#!/usr/bin/env ruby
-# frozen_string_literal: true
+# frozen_string_literal: false
 
-message_file = ARGV[0]
-text = File.read(message_file)
+require 'delegate'
 
-module Gem # :nodoc:
-  class Version # :nodoc:
-    def self.legacy?
-      Gem::Version.new(RUBY_VERSION) <= Gem::Version.new('2.6.10')
-    end
-  end
-end
-
-# docs
-class FileNotFoundError < StandardError
-  attr_reader :msg
-
-  def initialize(msg: 'File not found')
-    @msg = msg
-    super(msg)
-  end
-end
-
-module Encoding # :nodoc:
-  # docs
-  UnknownEncoding = Encoding.new
-end
-
-# docs
-class NonEnglishLettersError < StandardError
-  attr_reader :msg
-
-  def initialize(msg: 'Write your commit messages only with English
-                 letters!')
-    @msg = msg
-    super(msg)
-  end
-end
-
-# Message
-class CommitMessage < String
-  def initialize(text)
-    @text = text
-    super(text)
-  end
+class Message < DelegateClass(String) # :nodoc:
+  KEYWORDS = %w[__ENCODING__ __LINE__ __FILE__ BEGIN END alias and begin break case class def defined? do else elsif end
+                ensure false if module next nil not or redo rescue retry return self super then true undef unless
+                until when while yield].freeze
+  KEYWORDS_REGEX = Regexp.new("\\b(#{KEYWORDS.join('|')})\\b")
+  VERBS = /\b(Added|Changed|Fixed|Removed|Updated|Refactored|Renamed)\b/.freeze
 
   def edit_message!
-    raise NonEnglishLettersError if non_english_chars?
-
-    capitalize! unless capitalized?
-    upcase if start_with_verb?
+    written_in_english?
+    starts_with_verb?
+    contains_punctuation?
     fix_filenames!
     quote_keywords!
   end
 
   private
 
-  def non_english_chars?
-    gsub(/`.+?`/, '').match?(/[^\w [:punct:]]/)
+  def written_in_english?
+    # Check if the commit message is written only in English letters
+    return unless self !~ %r{^[A-Za-z./\\: ]*$}
+
+    puts 'Error: Commit message must be written only with English letters'
+    exit 1
   end
 
-  def capitalized?
-    self[0]&.upcase == self[0]
+  def starts_with_verb?
+    # Check if the first word of the commit message is a verb in the past simple form
+    return unless self !~ /^(Added|Changed|Fixed|Removed|Updated|Refactored|Renamed)/
+
+    puts 'Error: First word of commit message must start with a verb in the past simple form (ending in -ed)'
+    exit 1
   end
 
-  def start_with_verb?
-    puts 'Analyzing message...'
-    verbs = %w[Added Created Fixed Updated Reworked Removed]
-    articles = %w[the an a]
-    marks = %w[. ; , !]
-    # if verb was found but in downcase you should upcase it. then u should remove last dot from message
-    return true if start_with?(*verbs) && !include?(*articles)
+  def contains_punctuation?
+    return unless (mark = self =~ %r{[^\w\s.\\/:]})
 
-    # remove commas, dots, etc.
-    # try to edit message idk how
-    puts 'Try to write your commit messages without punctuation marks' if include?(*marks)
-    puts "Commit message should start with #{verbs.join(', ')}" unless start_with?(*verbs)
-    puts 'Commit message should not contain any of the articles' if include?(*articles)
-    false
+    puts "Error: Commit message should not contain #{mark} or any other punctuation marks."
+    exit 1
   end
 
   def fix_filenames!
-    filenames_basename.fix_pathnames!.quote_filenames!
+    filenames_basename
+    fix_pathnames!
+    fix_windows_path!
+    quote_filenames!
+    quote_keywords!
   end
 
   def filenames_basename
     # get filenames between ``
-    gsub!(/`(.*?)`/) do
+    gsub(/`(.*?)`/) do
       # get filename basename
       File.basename(Regexp.last_match(1))
     end
@@ -97,7 +63,15 @@ class CommitMessage < String
       # remove words with \ at the end
       # `dir1\ dir2\ file.rb` #=> `file.rb`
       _1.end_with?('\\')
-    end.join(' ')
+    end
+  end
+
+  def fix_windows_path!
+    if (windows_path = split.find { _1.include?('\\') })
+      gsub!(windows_path, windows_path.split(%r{\\|/}).last)
+    else
+      self
+    end
   end
 
   def quote_filenames!
@@ -105,30 +79,9 @@ class CommitMessage < String
   end
 
   def quote_keywords!
-    gsub!(Regexp.union(keywords)) { "\`#{_1}\`" }
-  end
-
-  def keywords
-    if Gem::Version.legacy?
-      require 'irb/ruby-token'
-      legacy_tokens
-    else
-      require 'irb/completion'
-      IRB::InputCompletor::ReservedWords
-    end
-  end
-
-  def legacy_tokens
-    RubyToken::TokenDefinitions.select { |definition| definition[1] == RubyToken::TkId }
-                               .map { |definition| definition[2] }
-                               .compact
-                               .sort
+    gsub(KEYWORDS_REGEX, '`\\1`')
   end
 end
 
-# message = ARGV[0]
-# text = File.read(message)
-# commit_message = CommitMessage.new(text)
-# commit_message.edit_message!
-
-File.write(message, commit_message)
+message = Message.new(ARGV[0])
+message.edit_message!
