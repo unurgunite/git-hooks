@@ -1,3 +1,4 @@
+#!/usr/bin/env ruby
 # frozen_string_literal: false
 
 require 'delegate'
@@ -85,3 +86,5 @@ end
 
 message = Message.new(ARGV[0])
 message.edit_message!
+
+exit 0
