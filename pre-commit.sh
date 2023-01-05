@@ -21,15 +21,24 @@
 #| License: MIT
 #|-----------------------------------------------------------------------------------------------------------------|
 
-# Check that the file is saved in UTF-8 encoding
-if ! file --mime-encoding "$1" | grep -q 'utf-8'; then
-  echo "Error: File $1 is not saved in UTF-8 encoding"
-  exit 1
+# Check that all staged files are saved in UTF-8 encoding
+for file in $(git diff --cached --name-only); do
+  sed -e 's/^\xEF\xBB\xBF//' "$file"
+  sed -e 's/\r$//' "$file"
+  encoding=$(file --mime-encoding -b "$file")
+  if [ "$encoding" != "utf-8" ] && [ "$encoding" != "us-ascii" ]; then
+    echo "Error: File $file is not encoded in UTF-8 or US-ASCII"
+    exit 1
+  fi
+done
+
+# Get only added or modified Ruby files
+changed_files=$(git status --porcelain | awk -F ' ' '$1 ~ /A|AM|^M/ {print $2}' | grep "\.rb$" | tr '\n' ' ')
+
+if [ -n "$changed_files" ]; then
+  # Run rubocop to detect and automatically fix errors in the code
+  bundle exec rubocop --autocorrect --require rubocop-performance "$changed_files"
+  exit $?
 fi
 
-# Remove BOM and carriage return
-sed -i '' -e 's/^\xEF\xBB\xBF//' "$1"
-sed -i '' -e 's/\r$//' "$1"
-
-# Run rubocop to detect and automatically fix errors in the code
-bundle exec rubocop --auto-correct "$1"
+exit 0
