@@ -84,7 +84,7 @@ class Message < DelegateClass(String) # :nodoc:
   end
 end
 
-message = Message.new(ARGV[0])
+message = Message.new(File.read(ARGV[0]))
 message.edit_message!
 
 exit 0
