@@ -22,7 +22,7 @@ class Message < DelegateClass(String) # :nodoc:
 
   def written_in_english?
     # Check if the commit message is written only in English letters
-    return unless self !~ %r{^[A-Za-z./\\: ]*$}
+    return unless self !~ %r{^[A-Za-z./\\:`\- ]*$}
 
     puts 'Error: Commit message must be written only with English letters'
     exit 1
@@ -37,7 +37,7 @@ class Message < DelegateClass(String) # :nodoc:
   end
 
   def contains_punctuation?
-    return unless (mark = self =~ %r{[^\w\s.\\/:]})
+    return unless (mark = self =~ %r{[^\w\s.\\/:`\-]})
 
     puts "Error: Commit message should not contain #{mark} or any other punctuation marks."
     exit 1
