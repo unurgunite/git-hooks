@@ -3,19 +3,22 @@
 
 require 'delegate'
 
-class Message < DelegateClass(String) # :nodoc:
+class Message < SimpleDelegator # :nodoc:
   KEYWORDS = %w[__ENCODING__ __LINE__ __FILE__ BEGIN END alias and begin break case class def defined? do else elsif end
                 ensure false if module next nil not or redo rescue retry return self super then true undef unless
                 until when while yield].freeze
   KEYWORDS_REGEX = Regexp.new("\\b(#{KEYWORDS.join('|')})\\b")
   VERBS = /\b(Added|Changed|Fixed|Removed|Updated|Refactored|Renamed)\b/.freeze
 
+  def initialize
+    super('')
+  end
+
   def edit_message!
     written_in_english?
     starts_with_verb?
     contains_punctuation?
     fix_filenames!
-    quote_keywords!
   end
 
   private
@@ -37,46 +40,44 @@ class Message < DelegateClass(String) # :nodoc:
   end
 
   def contains_punctuation?
-    return unless (mark = self =~ %r{[^\w\s.\\/:`\-]})
+    return unless (mark = self =~ %r{[^\w\s.\\/:`-]})
 
     puts "Error: Commit message should not contain #{mark} or any other punctuation marks."
     exit 1
   end
 
   def fix_filenames!
-    filenames_basename
-    fix_pathnames!
-    fix_windows_path!
-    quote_filenames!
-    quote_keywords!
+    __getobj__
+      .then(&method(:extract_filenames))
+      .then(&method(:remove_backslashes!))
+      .then(&method(:fix_windows_path!))
+      .then(&method(:wrap_filenames!))
   end
 
-  def filenames_basename
-    # get filenames between ``
-    gsub(/`(.*?)`/) do
-      # get filename basename
-      File.basename(Regexp.last_match(1))
+  def extract_filenames(str)
+    str.gsub(/`([^`]+)`/) do |_match|
+      match_data = Regexp.last_match
+      File.basename(match_data[1])
     end
   end
 
-  def fix_pathnames!
-    split.reject do
-      # remove words with \ at the end
-      # `dir1\ dir2\ file.rb` #=> `file.rb`
-      _1.end_with?('\\')
-    end
-  end
-
-  def fix_windows_path!
-    if (windows_path = split.find { _1.include?('\\') })
-      gsub!(windows_path, windows_path.split(%r{\\|/}).last)
+  def fix_windows_path!(str)
+    if (windows_path = str.split.find { _1.include?('\\') })
+      obj = gsub!(windows_path, windows_path.split(%r{\\|/}).last)
+      __setobj__(obj)
     else
       self
     end
   end
 
-  def quote_filenames!
-    gsub!(/((\S+)?\.\S+)/) { "\`#{File.basename(_1)}\`" }
+  def remove_backslashes!(str)
+    obj = str.split.reject { |word| word.end_with?('\\') }.join(' ')
+    __setobj__(obj)
+  end
+
+  def wrap_filenames!(str)
+    obj = str.gsub(/((\S+)?\.\S+)/) { "`#{File.basename(_1)}`" }
+    __setobj__(obj)
   end
 
   def quote_keywords!
@@ -84,7 +85,8 @@ class Message < DelegateClass(String) # :nodoc:
   end
 end
 
-message = Message.new(File.read(ARGV[0]))
-message.edit_message!
+message = Message.new
+message << File.read(ARGV[0])
+puts message.edit_message!
 
 exit 0
